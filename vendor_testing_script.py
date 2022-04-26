@@ -126,7 +126,7 @@ class premier(Base):
 
 
 
-'''write a function that takes the team slack webhook and a message to post in the designated slack channel''''
+'''write a function that takes the team slack webhook and a message to post in the designated slack channel'''
 
 def slack_message(url, message):
     payload = {"text": message}
@@ -140,8 +140,9 @@ designated local folder for each vendor'''
 
 def pull_from_sftp(target_folder, local_folder, vendor_name):
 
-    # today= (datetime.datetime.now() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')
+    # today= (datetime.datetime.now() - datetime.timedelta(days=6)).strftime('%Y-%m-%d')
     today = datetime.datetime.strftime(datetime.datetime.today(), '%Y-%m-%d')
+    print(today)
 
     # opens connection to RRT SFTP using paramiko module
     if(vendor_name == 'rrt'):
@@ -166,10 +167,9 @@ def pull_from_sftp(target_folder, local_folder, vendor_name):
 
 
    # connect to the SQL database
-
     quoted = urllib.parse.quote_plus(f'DRIVER={{SQL Server}};SERVER={server_info};DATABASE=T2DAP')
     engine = create_engine('mssql+pyodbc:///?odbc_connect={}'.format(quoted), fast_executemany=True)
- 	conn = engine.connect()
+    conn = engine.connect()
     session = Session(engine)
 
     found_files = []
@@ -178,7 +178,7 @@ def pull_from_sftp(target_folder, local_folder, vendor_name):
 	# the vendor's name and filename in order to not process files with the same name for each vendor.
 
     for filename in sftp.listdir():
-        # print(filename)
+        print(filename)
         split_name = filename.split('_')
 
         if(split_name[0].lower() == vendor_name and split_name[1] == today and filename.split('.')[-1] == 'csv'):
@@ -221,7 +221,7 @@ def manipulate_data(local_folder, filename):
 
 '''Write a function that takes the new dataframe of each vendor and upload the records for each one to the database'''
 
-def update_database(vendor_name, df_vendor, local_folder, filename):
+def update_database(vendor_name, df_vendor):
 
     count_rows_inserted = 0
     state_list = [ 'AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA',
@@ -499,7 +499,7 @@ def update_database(vendor_name, df_vendor, local_folder, filename):
                        raise e
 
     # if there are already records in database with the same test id, the duplicated rows will be appended to an empty list
-		   else:
+           else:
                print('Premier DUPLICATE test')
                print(row)
                duplicated_premier.append(row)
@@ -586,7 +586,7 @@ if __name__ == '__main__':
                slack_message(url_slack,filename)
 
 			   # read the file using the function manipulate data to get a df
-               df_vendor, local_folder_name, filename_path = manipulate_data(local, filename)
+               df_vendor = manipulate_data(local, filename)
 
 			   # to get the column list needed in the dataframe that I am looping on, I extract the values from the vendor_columns dictionary and named a variable
                vendor_columns_list = vendor_columns[vendor_key]
@@ -596,7 +596,7 @@ if __name__ == '__main__':
                print('UPDATE DATABASE PHASE')
 
 			   #upload each dataframe  with the data manipulations in update_database and return the rows_count_database for each vendor
-               rows_count_database= update_database(vendor_key, df2upload, local_folder_name= local, filename_path=filename)
+               rows_count_database= update_database(vendor_key, df2upload)
                message=f"The count of new rows uploaded of {vendor_key} in the database is {rows_count_database}"
                slack_message(url_slack,message)
 
